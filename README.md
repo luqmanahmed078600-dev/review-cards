@@ -47,12 +47,12 @@
 <body>
 
     <div class="container">
-        <!-- Checking Database Status -->
+        <!-- Checking Status -->
         <div id="loading">
             <p>Checking card activation status...</p>
         </div>
 
-        <!-- Unclaimed Card State (Onboarding Form Link) -->
+        <!-- Unclaimed Card State -->
         <div id="activation-box" class="hidden">
             <h2>Setup Review Card</h2>
             <p>Card ID: <strong id="display-id" style="color:#1a73e8;">---</strong> is not activated yet.</p>
@@ -60,19 +60,18 @@
             <a id="form-link" href="#" target="_blank" class="btn">Configure Card Now</a>
         </div>
 
-        <!-- Error Layout State -->
+        <!-- Error State -->
         <div id="error-box" class="hidden">
             <h2>No Card ID Detected</h2>
-            <p>Please scan a physical QR code card containing a valid structural identity parameter.</p>
+            <p>Please scan a physical QR code card containing a valid identity parameter.</p>
         </div>
     </div>
 
     <script>
-        // Injected Google Links Configuration
-        const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vScEIYXURGnEUECSgXFrRyTHIpMuUYKUufNUSehhmGovSMvFAHW8-qVltqnemYeEbGwgQ-2NjNMejpE/pub?output=csv";
-        const formBaseUrl = "https://docs.google.com/forms/d/e/1FAIpQLSeWxhPnYOh5BP4wbo49iXlJ5Esx_oQ4wzQN0L6qmf_Ebohs8A/viewform";
+        // Your Exact Live Google CSV Data Link 
+        const GOOGLE_SHEET_CSV_URL = "https://google.com";
+        const formBaseUrl = "https://google.com";
 
-        // Read target URL structural properties
         const urlParams = new URLSearchParams(window.location.search);
         const cardId = urlParams.get('id');
 
@@ -89,7 +88,7 @@
             const cleanId = cardId.trim();
             displayId.textContent = cleanId;
             
-            // Pre-fills the Card ID field automatically using the explicit question parameter index token!
+            // Auto-fills the Card ID field in your Google Form
             formLink.href = `${formBaseUrl}?usp=pp_url&entry.1226768391=${encodeURIComponent(cleanId)}`;
             
             checkDatabase(cleanId);
@@ -101,45 +100,39 @@
                 if (!response.ok) throw new Error("Network offline");
                 const csvText = await response.text();
                 
-                // Parse rows cleanly split by lines
                 const lines = csvText.split(/\r?\n/);
                 
                 let isRegistered = false;
                 let finalDestination = "";
 
-                // Search data structure array (Skip tracking row header label)
-                for (let i = 1; i < lines.length; i++) {
+                // Read from right to left (bottom to top of your form responses) 
+                // This ensures if a shop updates their link later, the newest link works!
+                for (let i = lines.length - 1; i >= 1; i--) {
                     if (!lines[i]) continue;
                     
-                    // Simple CSV line splitter split by commas
                     const columns = lines[i].split(',');
                     if (columns.length >= 3) {
+                        // Matching Columns: [0]=Timestamp, [1]=Card ID, [2]=Review Link
                         const currentCardId = columns[1] ? columns[1].replace(/"/g, '').trim() : "";
-                        const currentStatus = columns[2] ? columns[2].replace(/"/g, '').trim().toLowerCase() : "";
-                        const currentUrl = columns[3] ? columns[3].replace(/"/g, '').trim() : "";
+                        const currentUrl = columns[2] ? columns[2].replace(/"/g, '').trim() : "";
 
-                        if (currentCardId === targetId) {
-                            if (currentStatus === "claimed" || currentStatus === "active") {
-                                isRegistered = true;
-                                finalDestination = currentUrl;
-                            }
-                            break;
+                        if (currentCardId === targetId && currentUrl.toLowerCase().startsWith("http")) {
+                            isRegistered = true;
+                            finalDestination = currentUrl;
+                            break; // Found the most recent active entry
                         }
                     }
                 }
 
-                if (isRegistered && finalDestination.startsWith("http")) {
-                    // Flash straight forward to Google Business Review popup box!
+                if (isRegistered && finalDestination) {
                     window.location.href = finalDestination;
                 } else {
-                    // Show activation welcome page block layout
                     loadingDiv.classList.add('hidden');
                     activationBox.classList.remove('hidden');
                 }
 
             } catch (err) {
                 console.error("Database connection failure:", err);
-                // System fallback framework to allow onboarding setup even if network data stream lags
                 loadingDiv.classList.add('hidden');
                 activationBox.classList.remove('hidden');
             }
