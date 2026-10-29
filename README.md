@@ -65,7 +65,7 @@
     </div>
 
     <script>
-        // Automatic configuration using your live structural endpoints
+        // Verified live database endpoints
         const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRrZ2Xu39pZ8HsoBrEvFXUo9tze4Gz3EdwViuxOZC3NxV5xCDnR6fz6T-Ad6EOiEnDyiOFMNMlEdsPC/pub?output=csv";
         const formBaseUrl = "https://docs.google.com/forms/d/e/1FAIpQLSdNKZ1Lw-YsljmJ1odjsP-Q3T7kI5kFbJVyKoc_yHwRtgxBvA/viewform";
 
@@ -85,7 +85,7 @@
             const cleanId = cardId.trim();
             displayId.textContent = cleanId;
 
-            // This maps your specific entry question box index token ('entry.574154592')
+            // Securely binds your specific input question box token ('entry.574154592')
             formLink.href = `${formBaseUrl}?usp=pp_url&entry.574154592=${encodeURIComponent(cleanId)}`;
             
             checkDatabase(cleanId);
@@ -96,16 +96,20 @@
                 const response = await fetch(GOOGLE_SHEET_CSV_URL);
                 if (!response.ok) throw new Error("Offline");
                 const csvText = await response.text();
+                
+                // Splitting rows accurately accounting for line breaks safely
                 const lines = csvText.split(/\r?\n/);
                 
                 let isRegistered = false;
                 let finalDestination = "";
 
-                // Scan through your Google Sheet rows from bottom-to-top to pull the newest update
+                // Scan rows from bottom to top to grab the freshest form entry
                 for (let i = lines.length - 1; i >= 1; i--) {
                     if (!lines[i]) continue;
                     
-                    const columns = lines[i].split(',');
+                    // Smart parse commas that are not inside matching quotation blocks
+                    const columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    
                     if (columns.length >= 3) {
                         const currentCardId = columns[1] ? columns[1].replace(/"/g, '').trim() : "";
                         const currentUrl = columns[2] ? columns[2].replace(/"/g, '').trim() : "";
@@ -125,7 +129,7 @@
                     activationBox.classList.remove('hidden');
                 }
             } catch (err) {
-                console.error(err);
+                console.error("Database check failed:", err);
                 loadingDiv.classList.add('hidden');
                 activationBox.classList.remove('hidden');
             }
